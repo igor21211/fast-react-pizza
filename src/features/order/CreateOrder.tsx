@@ -3,6 +3,13 @@ import { ICartItem } from "../cart/types";
 import { OrderFormData } from "./types";
 import { createOrder } from "../../services/apiRestaurant";
 import Button from "../../UI/Button";
+import { useDispatch, useSelector } from "react-redux";
+import store, { AppDispatch, RootState } from "../../services/store";
+import { FormEvent, useState } from "react";
+import EmptyCart from "../cart/EmptyCart";
+import { clearCart } from "../cart/cartSlice";
+import { formatCurrency } from "../../utils/helpers";
+import { fetchAddress } from "../user/userSlice";
 
 // https://uibakery.io/regex-library/phone-number
 const isValidPhone = (str: string): boolean =>
@@ -10,37 +17,24 @@ const isValidPhone = (str: string): boolean =>
     str
   );
 
-const fakeCart: ICartItem[] = [
-  {
-    pizzaId: 12,
-    name: "Mediterranean",
-    quantity: 2,
-    unitPrice: 16,
-    totalPrice: 32,
-  },
-  {
-    pizzaId: 6,
-    name: "Vegetale",
-    quantity: 1,
-    unitPrice: 13,
-    totalPrice: 13,
-  },
-  {
-    pizzaId: 11,
-    name: "Spinach and Mushroom",
-    quantity: 1,
-    unitPrice: 15,
-    totalPrice: 15,
-  },
-];
 
 const CreateOrder = (): JSX.Element => {
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
-  // const [withPriority, setWithPriority] = useState(false);
-  const formErrors  = useActionData();
+   const [withPriority, setWithPriority] = useState(false);
+   const dispatch = useDispatch<AppDispatch>();  
+  const formErrors: { phone?: string } = useActionData() as { phone?: string };
+  const username = useSelector((state: RootState) => state.user.username);
+  const address = useSelector((state: RootState) => state.user.address);
+  const loading = useSelector((state: RootState) => state.user.status === "loading");
+  const error = useSelector((state: RootState) => state.user.error);
+  const cart = useSelector((state: RootState) => state.cart.cart);  
+  const totalCartPrice = useSelector((state: RootState) => state.cart.cart.reduce((acc, item) => acc + item.totalPrice, 0));
+  const priorityPrice = withPriority ? 0.1 * totalCartPrice : 0;
+  const totalPrice = totalCartPrice + priorityPrice;
 
-  const cart = fakeCart;
+  if(cart.length === 0) return <EmptyCart />;
+
 
   return (
     <div className="px-4 py-6">
@@ -49,7 +43,7 @@ const CreateOrder = (): JSX.Element => {
       <Form method="POST" action="">
         <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
           <label className="sm:basis-40">First Name</label>
-          <input className="input grow" type="text" name="customer" required />
+          <input className="input grow" type="text" name="customer" required defaultValue={username} />
         </div>
 
         <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -60,10 +54,17 @@ const CreateOrder = (): JSX.Element => {
           </div>
         </div>
 
-        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="mb-5  flex flex-col gap-2 sm:flex-row sm:items-center">
           <label className="sm:basis-40">Address</label>
-          <div className="grow">
-            <input className="input w-full" type="text" name="address" required />
+          <div className="grow relative">
+            {loading ? <input className="input w-full" type="text" name="address" defaultValue={'Loading...'} disabled /> : <input className="input w-full" type="text" name="address" required defaultValue={address} />}
+          <span className="absolute right-[3px] z-50 sm:right-auto">
+          <Button disabled={loading} type="small" onClick={(e: FormEvent<HTMLButtonElement>) => {
+            e.preventDefault();
+            dispatch(fetchAddress());
+          }}>Get position</Button>
+          </span>
+          {error ? <p className="mt-2 rounded-md bg-red-100 p-2 text-xs text-red-700">{error}</p> : null}
           </div>
         </div>
 
@@ -73,8 +74,8 @@ const CreateOrder = (): JSX.Element => {
             type="checkbox"
             name="priority"
             id="priority"
-            // value={withPriority}
-            // onChange={(e) => setWithPriority(e.target.checked)}
+            checked={withPriority}
+            onChange={(e) => setWithPriority(e.target.checked)}
           />
           <label htmlFor="priority">Want to yo give your order priority?</label>
         </div>
@@ -85,7 +86,7 @@ const CreateOrder = (): JSX.Element => {
             disabled={isSubmitting}
             type="primary"
           >
-            {isSubmitting ? "Placing order..." : "Order now"}
+            {isSubmitting ? "Placing order..." : `Order now (${formatCurrency(totalPrice)})`}
           </Button>
         </div>
       </Form>
@@ -100,7 +101,6 @@ export async function action({
 }): Promise<Response> {
   const formData = await request.formData();
   const data = Object.fromEntries(formData.entries());
-  console.log(data);
   const order = {
     ...data,
     cart: JSON.parse(data.cart as string) as ICartItem[],
@@ -115,6 +115,7 @@ export async function action({
     return errors;
   }
   const newOrder: OrderFormData = await createOrder(order);
+  store.dispatch(clearCart());
   return redirect(`/order/${newOrder.id}`);
 }
 

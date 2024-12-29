@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom'
 
 interface ButtonProps {
     children: React.ReactNode
-    disabled?: boolean
-    to?: string
-    type: "primary" | "small" | "secondary"
+  disabled?: boolean;
+  to?: string;
+  type: "primary" | "small" | "secondary";
+  onClick?: (e: React.FormEvent<HTMLButtonElement>) => void;
 }
 
-const Button = ({children, disabled, to, type} :ButtonProps):JSX.Element => {
+const Button = ({children, disabled, to, type, onClick} :ButtonProps):JSX.Element => {
   const base = "bg-yellow-400 uppercase text-sm font-semibold text-stone-800 inline-block rounded-full hover:bg-yellow-300 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-offset-2"
 
   const styles = {
@@ -22,7 +23,7 @@ const Button = ({children, disabled, to, type} :ButtonProps):JSX.Element => {
   }
 
   return (
-    <button disabled={disabled} className={styles[type]}>
+    <button disabled={disabled} className={styles[type]} onClick={onClick}>
       {children}
     </button>
   );

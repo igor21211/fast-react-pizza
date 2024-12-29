@@ -14,6 +14,8 @@ const OrderItem = ({
   ingredients,
 }: OrderItemProps): JSX.Element => {
   const { quantity, name, totalPrice, pizzaId } = item;
+  console.log(ingredients);
+  console.log(isLoadingIngredients);
 
   return (
     <li key={pizzaId} className="py-3">
@@ -23,6 +25,7 @@ const OrderItem = ({
         </p>
         <p>{formatCurrency(totalPrice)}</p>
       </div>
+        <p className="text-sm text-stone-500 capitalize italic">{isLoadingIngredients ? "Loading..." : ingredients.join(", ")}</p>
     </li>
   );
 };

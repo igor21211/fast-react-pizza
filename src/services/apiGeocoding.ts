@@ -5,6 +5,7 @@ export async function getAddress({
   latitude: number;
   longitude: number;
 }): Promise<any> {
+  console.log("fetching address", latitude, longitude);
   const res = await fetch(
     `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}`
   );
